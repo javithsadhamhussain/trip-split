@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Splitwise - Expense Splitter</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Splitwise</h1>
+                <button id="createTripBtn" class="btn btn-primary">+ New Trip</button>
+            </div>
+            
+            <div class="trip-actions">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="selectAllTrips">
+                    Select All
+                </label>
+                <button id="deleteSelectedBtn" class="btn btn-danger" disabled>Delete Selected</button>
+            </div>
+            
+            <div class="trip-list" id="tripList">
+                <!-- Trips will be rendered here -->
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div id="emptyState" class="empty-state">
+                <h2>No trip selected</h2>
+                <p>Create a new trip or select an existing one to get started.</p>
+            </div>
+
+            <div id="tripDetails" class="trip-details" style="display: none;">
+                <div class="trip-header">
+                    <h2 id="tripName"></h2>
+                </div>
+
+                <!-- Tabs Navigation -->
+                <div class="tabs-nav">
+                    <button class="tab-btn active" data-tab="overview">Overview</button>
+                    <button class="tab-btn" data-tab="expenses">Expenses</button>
+                    <button class="tab-btn" data-tab="summary">Summary</button>
+                    <button class="tab-btn" data-tab="settlement">Settlement</button>
+                    <button class="tab-btn" data-tab="consolidated">Consolidated</button>
+                </div>
+
+                <!-- Overview Tab -->
+                <div id="overviewTab" class="tab-content active">
+                    <!-- Persons Section -->
+                    <section class="card">
+                        <div class="card-header">
+                            <h3>Persons</h3>
+                            <button id="addPersonBtn" class="btn btn-primary">+ Add Person</button>
+                        </div>
+                        <div id="personsList" class="persons-list"></div>
+                    </section>
+                </div>
+
+                <!-- Expenses Tab -->
+                <div id="expensesTab" class="tab-content">
+                    <section class="card">
+                        <div class="card-header">
+                            <h3>Expenses</h3>
+                            <button id="addExpenseBtn" class="btn btn-primary">+ Add Expense</button>
+                        </div>
+                        <div class="table-container">
+                            <table id="expensesTable" class="expenses-table">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Amount</th>
+                                        <th>Paid By</th>
+                                        <th>Participants</th>
+                                        <th>Per Person</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expensesList">
+                                    <!-- Expense rows will be rendered here -->
+                                </tbody>
+                            </table>
+                            <div id="expensesEmpty" style="display: none; text-align: center; padding: 2rem; color: var(--text-secondary);">
+                                No expenses added yet
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Summary Tab -->
+                <div id="summaryTab" class="tab-content">
+
+                    <section class="card">
+                        <div class="card-header">
+                            <h3>Expense Summary</h3>
+                        </div>
+                        <div class="table-container">
+                            <table id="expenseSummaryTable" class="summary-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Paid</th>
+                                        <th>Share</th>
+                                        <th>Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expenseSummaryBody">
+                                    <!-- Summary rows will be rendered here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Settlement Tab -->
+                <div id="settlementTab" class="tab-content">
+                    <section class="card">
+                        <div class="card-header">
+                            <h3>Settlement</h3>
+                            <div style="display: flex; gap: 0.75rem;">
+                                <button id="printBtn" class="btn btn-secondary">Print</button>
+                                <button id="exportPdfBtn" class="btn btn-secondary">Export PDF</button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table id="settlementTable" class="settlement-table">
+                                <thead>
+                                    <tr>
+                                        <th>Who Pays</th>
+                                        <th>To Whom</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="settlementBody">
+                                    <!-- Settlement rows will be rendered here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noSettlement" class="no-settlement">
+                            <p>All balances are settled!</p>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Consolidated Tab -->
+                <div id="consolidatedTab" class="tab-content">
+                    <!-- Trip Info Header -->
+                    <div id="consolidatedTripInfo" class="card" style="margin-bottom: 1.5rem; background-color: #f8f9fa; border-left: 4px solid var(--primary-color);">
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <h3 id="consolidatedTripName" style="margin: 0; color: var(--primary-color);"></h3>
+                            <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; font-size: 0.95rem; color: var(--text-secondary);">
+                                <span><strong>Date:</strong> <span id="consolidatedTripDate"></span></span>
+                                <span id="consolidatedTripBudget"><strong></strong> <span></span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settlement Section -->
+                    <section class="card">
+                        <div class="card-header">
+                            <h3>Settlement</h3>
+                            <div style="display: flex; gap: 0.75rem;">
+                                <button id="printBtnConsolidated" class="btn btn-secondary">Print</button>
+                                <button id="exportPdfBtnConsolidated" class="btn btn-secondary">Export PDF</button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table id="settlementTableConsolidated" class="settlement-table">
+                                <thead>
+                                    <tr>
+                                        <th>Who Pays</th>
+                                        <th>To Whom</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="settlementBodyConsolidated">
+                                    <!-- Settlement rows will be rendered here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noSettlementConsolidated" class="no-settlement">
+                            <p>All balances are settled!</p>
+                        </div>
+                    </section>
+
+                    <!-- Summary Section -->
+                    <section class="card">
+                        <div class="card-header">
+                            <h3>Expense Summary</h3>
+                        </div>
+                        <div class="table-container">
+                            <table id="expenseSummaryTableConsolidated" class="summary-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Paid</th>
+                                        <th>Share</th>
+                                        <th>Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expenseSummaryBodyConsolidated">
+                                    <!-- Summary rows will be rendered here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <!-- Expenses Section -->
+                    <section class="card">
+                        <div class="card-header">
+                            <h3>Expenses</h3>
+                            <button id="addExpenseBtnConsolidated" class="btn btn-primary">+ Add Expense</button>
+                        </div>
+                        <div class="table-container">
+                            <table id="expensesTableConsolidated" class="expenses-table">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Amount</th>
+                                        <th>Paid By</th>
+                                        <th>Participants</th>
+                                        <th>Per Person</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expensesListConsolidated">
+                                    <!-- Expense rows will be rendered here -->
+                                </tbody>
+                            </table>
+                            <div id="expensesEmptyConsolidated" style="display: none; text-align: center; padding: 2rem; color: var(--text-secondary);">
+                                No expenses added yet
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal: Create Trip -->
+    <div id="createTripModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Trip</h3>
+                <button class="modal-close" data-modal="createTripModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createTripForm">
+                    <div class="form-group">
+                        <label for="tripNameInput">Trip Name</label>
+                        <input type="text" id="tripNameInput" required placeholder="e.g., Goa Trip">
+                    </div>
+                    <div class="form-group">
+                        <label for="tripBudgetInput">Budget (₹)</label>
+                        <input type="number" id="tripBudgetInput" step="0.01" min="0" placeholder="0.00 (optional)">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" data-modal="createTripModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add Person -->
+    <div id="addPersonModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Person</h3>
+                <button class="modal-close" data-modal="addPersonModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addPersonForm">
+                    <div class="form-group">
+                        <label for="personNameInput">Person Name</label>
+                        <input type="text" id="personNameInput" required placeholder="e.g., John">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" data-modal="addPersonModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add Expense -->
+    <div id="addExpenseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Expense</h3>
+                <button class="modal-close" data-modal="addExpenseModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addExpenseForm">
+                    <div class="form-group">
+                        <label for="expenseTitleInput">Title</label>
+                        <input type="text" id="expenseTitleInput" required placeholder="e.g., Dinner">
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseAmountInput">Amount (₹)</label>
+                        <input type="number" id="expenseAmountInput" step="0.01" min="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="expensePaidBySelect">Paid By</label>
+                        <select id="expensePaidBySelect" required>
+                            <option value="">Select person</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Participants (select all who share this expense)</label>
+                        <button type="button" id="selectAllParticipantsBtn" class="btn btn-primary" style="margin-bottom: 0.75rem; padding: 0.5rem 1rem;">Select All Members</button>
+                        <div id="participantsCheckboxes" class="participants-checkboxes">
+                            <!-- Checkboxes will be rendered here -->
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" data-modal="addExpenseModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Expense</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Expense -->
+    <div id="editExpenseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Expense</h3>
+                <button class="modal-close" data-modal="editExpenseModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editExpenseForm">
+                    <input type="hidden" id="editExpenseId">
+                    <div class="form-group">
+                        <label for="editExpenseTitleInput">Title</label>
+                        <input type="text" id="editExpenseTitleInput" required placeholder="e.g., Dinner">
+                    </div>
+                    <div class="form-group">
+                        <label for="editExpenseAmountInput">Amount (₹)</label>
+                        <input type="number" id="editExpenseAmountInput" step="0.01" min="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="editExpensePaidBySelect">Paid By</label>
+                        <select id="editExpensePaidBySelect" required>
+                            <option value="">Select person</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Participants (select all who share this expense)</label>
+                        <button type="button" id="editSelectAllParticipantsBtn" class="btn btn-primary" style="margin-bottom: 0.75rem; padding: 0.5rem 1rem;">Select All Members</button>
+                        <div id="editParticipantsCheckboxes" class="participants-checkboxes">
+                            <!-- Checkboxes will be rendered here -->
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" data-modal="editExpenseModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Expense</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Expense Details -->
+    <div id="expenseDetailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Expense Details</h3>
+                <button class="modal-close" data-modal="expenseDetailsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="expenseDetailsContent">
+                    <!-- Expense details will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
